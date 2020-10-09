@@ -83,29 +83,34 @@ def perform_action(device, action):
     return False
 
 
-def main(port, device):
+def main(prefer_port, device):
   s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
   s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-  s.bind(('127.0.0.1', port))
+  s.bind(('127.0.0.1', prefer_port))
   s.listen(5)
-  print('Bound and listening ...')
-  conn, addr = s.accept()
-  print('Connected by %s' % str(addr))
-  for line in socket_line_split(conn):
-    action = parse_command(line)
-    if action is None:
-      conn.sendall('invalid\n')
-      continue
-    cmd, args = action
-    if cmd == 'version':
-      conn.sendall('android_input_agent v0\n')
-    else:
-      if perform_action(device, action):
-        conn.sendall('ok\n')
-      else:
-        conn.sendall('failed\n')
+  # note that prefer_port might not be the port we end up using,
+  # this could happen when prefer_port is 0, in which it is the OS assigning a port to us.
+  host, port = s.getsockname()
+  print('Listening on %s:%s ...' % (host, port))
 
-  conn.close()
+  while True:
+    conn, (c_host, c_port) = s.accept()
+    print('Accepted connection from %s:%s' % (c_host, c_port))
+    for line in socket_line_split(conn):
+      action = parse_command(line)
+      if action is None:
+        conn.sendall('invalid\n')
+        continue
+      cmd, args = action
+      if cmd == 'version':
+        conn.sendall('android_input_agent v0\n')
+      else:
+        if perform_action(device, action):
+          conn.sendall('ok\n')
+        else:
+          conn.sendall('failed\n')
+    print('Closing connection from %s:%s' % (c_host, c_port))
+    conn.close()
   s.close()
 
 
