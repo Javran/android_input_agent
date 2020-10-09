@@ -97,8 +97,8 @@ def main(port, device):
       conn.sendall('invalid\n')
       continue
     cmd, args = action
-    if cmd == 'check':
-      conn.sendall('ok\n')
+    if cmd == 'version':
+      conn.sendall('android_input_agent v0\n')
     else:
       if perform_action(device, action):
         conn.sendall('ok\n')
