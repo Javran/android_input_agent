@@ -22,8 +22,8 @@ def parse_coord(raw_x, raw_y):
 
 def parse_command(raw):
   raw = raw.strip()
-  if raw == 'check':
-    return 'check', []
+  if raw == 'version':
+    return 'version', []
 
   r = RE_TAP.match(raw)
   if r is not None:
@@ -63,7 +63,7 @@ def socket_line_split(s):
 
 def perform_action(device, action):
   cmd, args = action
-  if cmd == 'check':
+  if cmd == 'version':
     return True
   try:
     if cmd == 'tap':
