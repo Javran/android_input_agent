@@ -111,11 +111,6 @@ def main(port, device):
 
 if __name__ == '__main__':
   port = int(os.getenv('INPUT_AGENT_PORT'), base=10)
-  adb_path = os.getenv('ADB_BIN', 'adb')
-  if adb_path == 'adb':
-    print('Using adb from PATH.')
-  else:
-    print('Using % as adb.' % adb_path)
 
   # One annoyance of using monkeyrunner is that whatever process is up on the phone side
   # does not terminate after it is disconnected, this does not raise any exception
@@ -123,7 +118,8 @@ if __name__ == '__main__':
   # Therefore as a shotgun approach, we need to make sure that previous monkeyrunner process
   # on phone is killed before we attempt any connection.
   # See: https://stackoverflow.com/a/28063652/315302
-  _ = subprocess.call([adb_path, 'exec-out', 'killall', 'com.android.commands.monkey'])
+  # It is intentional that this process call is unchecked.
+  subprocess.call(['adb', 'exec-out', 'killall', 'com.android.commands.monkey'])
 
   print('Waiting for adb connection...')
   device = MonkeyRunner.waitForConnection()
