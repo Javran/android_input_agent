@@ -1,10 +1,20 @@
 import socket
 
+from typing import Optional, Sequence, Tuple
+
+
+# Rectangle, (x, y, w, h)
+Rect = Tuple[int, int, int, int]
+
+# Coord, (x, y)
+Coord = Tuple[int, int]
+
 
 class InputAgentClient:
 
-  socket = None
-  buffer = b''
+  port: int
+  socket = None  # type: Optional[socket.socket]
+  buffer = b''  # type: bytes
 
   def __init__(self, port):
     self.port = port
@@ -65,12 +75,12 @@ class InputAgentClient:
     msg = self._recvResponse()
     assert msg == 'android_input_agent v0', f'Unexpected version: {msg}'
 
-  def commandTap(self, coord):
+  def commandTap(self, coord: Coord):
     x, y = coord
     self._sendCommand(f'tap {x} {y}')
     self._recvOkOrFailed()
 
-  def commandSwipe(self, coord0, coord1, duration=None):
+  def commandSwipe(self, coord0: Coord, coord1: Coord, duration:Optional[int] = None):
     x0, y0 = coord0
     x1, y1 = coord1
     cmd = f'swipe {x0} {y0} {x1} {y1}'
@@ -79,7 +89,7 @@ class InputAgentClient:
     self._sendCommand(cmd)
     self._recvOkOrFailed()
 
-  def _recvDataChunks(self, count):
+  def _recvDataChunks(self, count: int):
     results = []
     for i in range(count):
       resp = self._recvResponse()
@@ -107,7 +117,7 @@ class InputAgentClient:
     [img] = self._recvDataChunks(1)
     return img
 
-  def commandScreenshotRects(self, rects):
+  def commandScreenshotRects(self, rects: Sequence[Rect]):
     rect_nums = []
     for rect in rects:
       rect_nums += map(str, rect)
