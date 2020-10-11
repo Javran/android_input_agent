@@ -114,7 +114,6 @@ def perform_action(device, action, conn):
         conn.sendall('begin %d %d\n' % (i, len(payload)))
         conn.sendall(payload)
         conn.sendall('end %d\n' % i)
-
     if errors.size():
       conn.sendall('failed\n')
       return False
@@ -151,8 +150,9 @@ def main(prefer_port):
         cmd, args = action
         if not perform_action(device, action, conn):
           failed = True
+          break
     except:
-      pass
+      failed = True
     print('Closing connection from %s:%s' % (c_host, c_port))
     conn.close()
   s.close()
