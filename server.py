@@ -11,9 +11,17 @@ import sys
 
 from com.android.monkeyrunner import MonkeyRunner, MonkeyDevice
 
+from java.util.logging import Level, Logger, StreamHandler, SimpleFormatter
+from java.io import ByteArrayOutputStream
+
 
 RE_TAP = re.compile(r'^tap (\d+) (\d+)$')
 RE_SWIPE = re.compile(r'^swipe (\d+) (\d+) (\d+) (\d+)(?: (\d+))?$')
+
+global errors, device, logger
+errors = None
+device = None
+logger = None
 
 
 def parse_coord(raw_x, raw_y):
@@ -76,14 +84,18 @@ def perform_action(device, action):
       else:
         duration = duration / 1000.0
       device.drag(coord_start, coord_end, duration, 5)
-    return True
+
+    if errors.size():
+      return False
+    else:
+      return True
   except:
     e = sys.exc_info()[0]
     print(e)
     return False
 
 
-def main(prefer_port, device):
+def main(prefer_port):
   s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
   s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
   s.bind(('127.0.0.1', prefer_port))
@@ -93,7 +105,9 @@ def main(prefer_port, device):
   host, port = s.getsockname()
   print('Listening on %s:%s ...' % (host, port))
 
-  while True:
+
+  failed = False
+  while not failed:
     conn, (c_host, c_port) = s.accept()
     print('Accepted connection from %s:%s' % (c_host, c_port))
     for line in socket_line_split(conn):
@@ -109,9 +123,16 @@ def main(prefer_port, device):
           conn.sendall('ok\n')
         else:
           conn.sendall('failed\n')
+          failed = True
     print('Closing connection from %s:%s' % (c_host, c_port))
     conn.close()
   s.close()
+  if failed:
+    # It seems like some state is not set properly, as once it fails,
+    # killing monkey on mobile side doesn't seem to work.
+    # so instead, let's just let whatever starts this server do the restart.
+    print('Something unrecoverable happened. commiting suicide...')
+    sys.exit(6)
 
 
 if __name__ == '__main__':
@@ -126,6 +147,11 @@ if __name__ == '__main__':
   # It is intentional that this process call is unchecked.
   subprocess.call(['adb', 'exec-out', 'killall', 'com.android.commands.monkey'])
 
+  # https://stackoverflow.com/a/28070375/315302
+  errors = ByteArrayOutputStream(100)
+  logger = Logger.getLogger('com.android.chimpchat.adb.AdbChimpDevice')
+  logger.addHandler(StreamHandler(errors, SimpleFormatter()))
+
   print('Waiting for adb connection...')
   device = MonkeyRunner.waitForConnection()
-  main(port, device)
+  main(port)

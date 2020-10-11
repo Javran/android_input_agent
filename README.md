@@ -31,3 +31,27 @@ with `\n` in the end.
 
   Note that `duration` is optional and is in milliseconds.
   Returns either `ok` or `failed`, after this command is attempted.
+
+## Error recovery
+
+You might encounter some boost of "Broken pipes" exceptions,
+which is probably caused by interruption to connection with `adb`.
+I've tried some methods without restarting monkeyrunner,
+unfortunately none of those approaches seem to work.
+Therefore the server simply quits with exit code `6`
+(so that it can be distinguished from keyboard interrupts),
+you might want to have your `aia` script to put this server in a loop like below:
+
+```bash
+for (( ; ; ))
+do
+    $MONKEY_RUNNER_BIN server.py
+    if (($? != 6))
+    then
+       break
+    fi
+done
+```
+
+Yes it's sad that we have to do this, but I have little interest for now
+to investigate into what the heck is going on with monkeyrunner.
