@@ -57,7 +57,7 @@ I've tried some methods without restarting monkeyrunner,
 unfortunately none of those approaches seem to work.
 Therefore the server simply quits with exit code `6`
 (so that it can be distinguished from keyboard interrupts),
-you might want to have your `aia` script to put this server in a loop like below:
+you might want to put this server to run in a loop in your `aia` script like below:
 
 ```bash
 for (( ; ; ))
