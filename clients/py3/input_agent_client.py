@@ -136,8 +136,7 @@ class InputAgentClient:
       expected_prefix = f'begin {i} '
       assert resp.startswith(expected_prefix), f'Expect begin marker, but got {resp}'
       expected_size = int(resp[len(expected_prefix):])
-      payload = self._buffer
-      self._buffer = b''
+      payload, self._buffer = self._buffer, b''
       while len(payload) < expected_size:
         diff = expected_size - len(payload)
         incr = self.socket.recv(diff, socket.MSG_WAITALL)
