@@ -47,7 +47,9 @@ def parse_command(raw):
                      parse_coord(r.group(3), r.group(4)),
                      duration
                      ]
-
+  if raw.startswith('screenshot'):
+    if raw == 'screenshot all':
+      return 'screenshot', ['all']
   return None
 
 
@@ -69,9 +71,10 @@ def socket_line_split(s):
     yield buf
 
 
-def perform_action(device, action):
+def perform_action(device, action, conn):
   cmd, args = action
   if cmd == 'version':
+    conn.sendall('android_input_agent v0\n')
     return True
   try:
     if cmd == 'tap':
@@ -84,14 +87,24 @@ def perform_action(device, action):
       else:
         duration = duration / 1000.0
       device.drag(coord_start, coord_end, duration, 5)
+    elif cmd == 'screenshot':
+      img = device.takeSnapshot()
+      assert args == ['all']
+      payload = img.convertToBytes('png')
+      conn.sendall('begin 0 %d\n' % len(payload))
+      conn.sendall(payload)
+      conn.sendall('end 0\n')
 
     if errors.size():
+      conn.sendall('failed\n')
       return False
     else:
+      conn.sendall('ok\n')
       return True
   except:
     e = sys.exc_info()[0]
     print(e)
+    conn.sendall('failed\n')
     return False
 
 
@@ -105,7 +118,6 @@ def main(prefer_port):
   host, port = s.getsockname()
   print('Listening on %s:%s ...' % (host, port))
 
-
   failed = False
   while not failed:
     conn, (c_host, c_port) = s.accept()
@@ -117,14 +129,8 @@ def main(prefer_port):
           conn.sendall('invalid\n')
           continue
         cmd, args = action
-        if cmd == 'version':
-          conn.sendall('android_input_agent v0\n')
-        else:
-          if perform_action(device, action):
-            conn.sendall('ok\n')
-          else:
-            conn.sendall('failed\n')
-            failed = True
+        if not perform_action(device, action, conn):
+          failed = True
     except:
       pass
     print('Closing connection from %s:%s' % (c_host, c_port))
