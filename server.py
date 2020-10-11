@@ -152,7 +152,7 @@ def main(prefer_port):
           failed = True
           break
     except:
-      failed = True
+      pass
     print('Closing connection from %s:%s' % (c_host, c_port))
     conn.close()
   s.close()
