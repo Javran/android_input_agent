@@ -110,20 +110,23 @@ def main(prefer_port):
   while not failed:
     conn, (c_host, c_port) = s.accept()
     print('Accepted connection from %s:%s' % (c_host, c_port))
-    for line in socket_line_split(conn):
-      action = parse_command(line)
-      if action is None:
-        conn.sendall('invalid\n')
-        continue
-      cmd, args = action
-      if cmd == 'version':
-        conn.sendall('android_input_agent v0\n')
-      else:
-        if perform_action(device, action):
-          conn.sendall('ok\n')
+    try:
+      for line in socket_line_split(conn):
+        action = parse_command(line)
+        if action is None:
+          conn.sendall('invalid\n')
+          continue
+        cmd, args = action
+        if cmd == 'version':
+          conn.sendall('android_input_agent v0\n')
         else:
-          conn.sendall('failed\n')
-          failed = True
+          if perform_action(device, action):
+            conn.sendall('ok\n')
+          else:
+            conn.sendall('failed\n')
+            failed = True
+    except:
+      pass
     print('Closing connection from %s:%s' % (c_host, c_port))
     conn.close()
   s.close()
