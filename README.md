@@ -32,6 +32,23 @@ with `\n` in the end.
   Note that `duration` is optional and is in milliseconds.
   Returns either `ok` or `failed`, after this command is attempted.
 
+- `screenshot all`: capture screen and send it back as PNG data chunk.
+
+  Receives following bytes in that order:
+  + `begin 0 <sz>\n`, in which `<sz>` is an integer indicating number of bytes
+  + subsequent `<sz>` bytes are the content of the image.
+  + `end 0\n`
+  + `ok\n`
+
+- `screenshot x0 y0 w0 h0[ x1 y1 w1 h1]`: capture screen but only send parts of it back.
+
+  + there could be many `x,y,w,h` tuples following `screenshot` command.
+  + suppose there are `n` tuples in total, images are sent in that order following a protocol similar to that of `screenshot all`:
+  + `begin <i> <sz>\n`, in which `i` ranges from `0` to `n-1`.
+  + payload of size `<sz>`
+  + `end <i>\n` marking the end of this image.
+  + after all images are sent, an `ok\n` is followed.
+
 ## Error recovery
 
 You might encounter some boost of "Broken pipes" exceptions,

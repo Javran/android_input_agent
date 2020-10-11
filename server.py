@@ -17,6 +17,7 @@ from java.io import ByteArrayOutputStream
 
 RE_TAP = re.compile(r'^tap (\d+) (\d+)$')
 RE_SWIPE = re.compile(r'^swipe (\d+) (\d+) (\d+) (\d+)(?: (\d+))?$')
+RE_SCREENSHOT_LIST = re.compile(r'^screenshot( (\d+) (\d+) (\d+) (\d+))+$')
 
 global errors, device, logger
 errors = None
@@ -50,6 +51,14 @@ def parse_command(raw):
   if raw.startswith('screenshot'):
     if raw == 'screenshot all':
       return 'screenshot', ['all']
+    if RE_SCREENSHOT_LIST.match(raw):
+      nums = map(lambda x: int(x, base=10), raw.split(' ')[1:])
+      rects = []
+      while nums:
+        (x,y,w,h), nums = nums[:4], nums[4:]
+        rects.append((x,y,w,h))
+      return 'screenshot', rects
+
   return None
 
 
@@ -85,15 +94,26 @@ def perform_action(device, action, conn):
       if duration is None:
         duration = 0.3
       else:
+        # the protocol is meant to mimic `adb exec-out input` command,
+        # in which duration is given as milliseconds,
+        # thus this conversion, as monkeyrunner uses seconds.
         duration = duration / 1000.0
       device.drag(coord_start, coord_end, duration, 5)
     elif cmd == 'screenshot':
       img = device.takeSnapshot()
-      assert args == ['all']
-      payload = img.convertToBytes('png')
-      conn.sendall('begin 0 %d\n' % len(payload))
-      conn.sendall(payload)
-      conn.sendall('end 0\n')
+
+      if args == ['all']:
+        img_list = [img]
+      else:
+        img_list = []
+        for rect in args:
+          img_list.append(img.getSubImage(rect))
+
+      for (i, cur_img) in enumerate(img_list):
+        payload = cur_img.convertToBytes('png')
+        conn.sendall('begin %d %d\n' % (i, len(payload)))
+        conn.sendall(payload)
+        conn.sendall('end %d\n' % i)
 
     if errors.size():
       conn.sendall('failed\n')
